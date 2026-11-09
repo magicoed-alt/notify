@@ -181,7 +181,20 @@
     enviarSoUmaVez: false,
 
     // Tentativas extras se a internet falhar
-    novasTentativas: 3
+    novasTentativas: 3,
+
+    // Texto que já aparece escrito quando o webapp abre (ex.: nome da música e da banda).
+    // Enquanto esse texto estiver na tela, NADA é enviado ao Inject.
+    // Quando você apaga tudo e a pessoa começa a escrever, vale a regra dos 5 segundos.
+    // Para trocar sem mexer no código, abra o link com ?texto=... no final, por exemplo:
+    //   https://seusite/index.html?texto=Carla LS JACK
+    // Use | no link para quebrar linha (a 1ª linha vira o título em negrito).
+    // Link com ?texto= (vazio) abre a nota em branco.
+    textoInicial: "Carla LS JACK",
+
+    // true = com texto pré-definido, a nota abre como nota já salva (modo leitura);
+    // toque no texto para editar. false = abre direto no teclado.
+    abrirEmLeituraComTexto: true
   };
   /* ===================================================================== */
 
@@ -189,6 +202,12 @@
   var app = $("app"), titleEl = $("title"), bodyEl = $("body"), main = $("main"), dbg = $("dbg");
   var editing = true, timer = null, lastSent = "", sentOnce = false, retries = 0;
   var testMode = /teste/i.test(location.hash);
+
+  // texto pré-definido (link ?texto=... tem prioridade sobre o CONFIG)
+  var params = new URLSearchParams(location.search);
+  var pre = params.has("texto") ? params.get("texto") : CONFIG.textoInicial;
+  pre = (pre || "").split("|").join("\n");
+  var armado = !pre.trim();   // só envia depois que a nota ficar totalmente vazia
 
   /* ---------- tamanho da área visível (acompanha o teclado) ---------- */
   function layout(){
@@ -323,6 +342,11 @@
 
   function onType(e){
     if (e && e.target) grow(e.target);
+    if (!armado){
+      // ainda é o texto pré-definido: não envia nada até apagarem tudo
+      if (currentText() === ""){ armado = true; log("Nota vazia: regra dos " + CONFIG.espera + "s ATIVADA"); }
+      return;
+    }
     clearTimeout(timer);
     timer = setTimeout(flush, CONFIG.espera * 1000);
   }
@@ -337,9 +361,16 @@
   window.addEventListener("pagehide", function(){ if (timer) flush(); });
 
   /* ---------- início ---------- */
-  setEditing(true);
+  if (pre.trim()){
+    var linhas = pre.split("\n");
+    titleEl.value = linhas.shift();
+    bodyEl.value = linhas.join("\n");
+  }
+  var abrirLendo = !!pre.trim() && CONFIG.abrirEmLeituraComTexto;
+  setEditing(!abrirLendo);
   growAll();
-  titleEl.focus();
+  if (!abrirLendo) titleEl.focus();
+  if (!armado) log("Texto pré-definido na tela: não envia até apagar tudo");
   // o iPhone só abre o teclado depois de um toque; o primeiro toque em qualquer lugar foca o título
   document.addEventListener("touchend", function first(){
     document.removeEventListener("touchend", first);
