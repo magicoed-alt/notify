@@ -1,0 +1,30 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teste de formatos</title>
+<style>body{font:16px -apple-system,Arial;padding:18px;max-width:560px;margin:auto}
+button{display:block;width:100%;margin:10px 0 2px;padding:14px;font-size:16px;border-radius:10px;border:1px solid #888;background:#f3f3f3;text-align:left}
+small{color:#555;word-break:break-all}</style></head><body>
+<h3>Teste de formatos (POST) do Inject</h3>
+<p>Toque em um botão de cada vez e veja qual notificação chega com o texto <b>TESTE-n</b>. Me diga qual número funcionou.</p>
+<div id="l"></div>
+<script>
+var url="https://11z.co/_w/17794_selection";
+var T="text/plain;charset=UTF-8", F="application/x-www-form-urlencoded";
+var f=[
+ ["texto puro", T, "TESTE-1"],
+ ["selection=", F, "selection=TESTE-2"],
+ ["text=", F, "text=TESTE-3"],
+ ["value=", F, "value=TESTE-4"],
+ ["JSON selection", T, '{"selection":"TESTE-5"}'],
+ ["JSON text", T, '{"text":"TESTE-6"}'],
+ ["JSON value", T, '{"value":"TESTE-7"}']
+];
+var l=document.getElementById("l");
+f.forEach(function(x,i){
+  var b=document.createElement("button"); b.textContent="Enviar formato "+(i+1)+" ("+x[0]+")";
+  var s=document.createElement("small"); s.textContent="POST "+x[1].split(";")[0]+" → "+x[2];
+  b.onclick=function(){ fetch(url,{method:"POST",mode:"no-cors",cache:"no-store",headers:{"Content-Type":x[1]},body:x[2]})
+    .then(function(){b.textContent="Formato "+(i+1)+" — enviado";},function(){b.textContent="Formato "+(i+1)+" — falhou (sem internet?)";}); };
+  l.appendChild(b); l.appendChild(s);
+});
+</script></body></html>
