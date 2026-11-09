@@ -158,7 +158,7 @@
      ===================================================================== */
   var CONFIG = {
     // Endereço do seu Inject
-    url: "https://11z.co/_w/17794_selection",
+    url: "https://11z.co/_w/17794/selection",
 
     // "POST" (enviar para o Inject) ou "GET" (se usar GET, coloque {texto} na url)
     metodo: "POST",
@@ -167,11 +167,11 @@
     //   {texto}     = texto puro            -> "{texto}"
     //   {textoUrl}  = texto codificado      -> "selection={textoUrl}"
     //   {textoJson} = texto como string JSON -> '{"selection":{textoJson}}'
-    corpo: "{texto}",
+    corpo: '{"value":{textoJson}}',
 
-    // Tipo do corpo. Para funcionar de qualquer site use text/plain
-    // (ou application/x-www-form-urlencoded para formulário).
-    tipo: "text/plain;charset=UTF-8",
+    // Tipo do corpo. Se o navegador não permitir application/json (CORS),
+    // o envio é refeito automaticamente como text/plain com o mesmo conteúdo.
+    tipo: "application/json",
 
     // Segundos sem digitar até enviar
     espera: 5,
@@ -298,7 +298,18 @@
         timer = setTimeout(flush, CONFIG.espera * 1000);
       }
     };
-    try{ fetch(r.url, r.opts).then(ok, fail); }catch(e){ fail(); }
+    try{
+      if (CONFIG.metodo !== "GET" && CONFIG.tipo.indexOf("json") > -1){
+        // 1ª tentativa normal (JSON). Se o navegador barrar (CORS), reenvia como text/plain.
+        var alt = {mode:"no-cors", cache:"no-store", keepalive:true, referrerPolicy:"no-referrer", method:"POST",
+                   headers:{"Content-Type":"text/plain;charset=UTF-8"}, body:r.opts.body};
+        var o2 = {cache:"no-store", keepalive:true, referrerPolicy:"no-referrer", method:"POST",
+                  headers:{"Content-Type":CONFIG.tipo}, body:r.opts.body};
+        fetch(r.url, o2).then(ok, function(){ fetch(r.url, alt).then(ok, fail); });
+      } else {
+        fetch(r.url, r.opts).then(ok, fail);
+      }
+    }catch(e){ fail(); }
   }
 
   function flush(){
